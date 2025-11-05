@@ -1,0 +1,65 @@
+======================================================
+ARCHIVOS ELIMINADOS - LIMPIEZA DEL PROYECTO
+======================================================
+Fecha: 4 de Noviembre, 2025
+
+Los siguientes archivos fueron eliminados porque ya no se usan:
+
+ARCHIVOS DE BASE DE DATOS (Obsoletos):
+------------------------------------------------------
+✅ database/schema_nuevo_parte1.sql
+✅ database/schema_nuevo_parte2.sql  
+✅ database/schema_nuevo_parte3.sql
+✅ database/INSTRUCCIONES_MIGRACION.txt
+
+Razón: Reemplazados por "schema_completo_nuevo.sql" que 
+contiene TODA la base de datos en un solo archivo.
+
+
+ARCHIVOS DE DOCUMENTACIÓN (Obsoletos):
+------------------------------------------------------
+✅ RESUMEN_EJECUTIVO.txt
+✅ GUIA_IMPLEMENTACION_COMPLETA.md
+
+Razón: Reemplazados por:
+- LEER_PRIMERO.md (Guía completa y actualizada)
+- INSTRUCCIONES_IMPLEMENTACION.md (Documentación técnica)
+
+
+ARCHIVOS DE BACKEND (Obsoletos):
+------------------------------------------------------
+✅ backend/app_extended_endpoints.py
+✅ backend/endpoints_seguridad.py
+
+Razón: Todos los endpoints están ahora integrados en "app.py"
+
+
+======================================================
+ARCHIVOS QUE PERMANECEN (Importantes):
+======================================================
+
+BASE DE DATOS:
+- database/schema_completo_nuevo.sql ← USAR ESTE
+
+DOCUMENTACIÓN:
+- LEER_PRIMERO.md ← LEER ESTE PRIMERO
+- INSTRUCCIONES_IMPLEMENTACION.md ← Detalles técnicos
+
+BACKEND:
+- backend/app.py ← Servidor principal
+- backend/database.py ← Funciones de BD
+- backend/gemini_service.py ← IA
+- backend/ml_engine.py ← Machine Learning
+- backend/config.py ← Configuración
+- backend/test_conexion.py ← Script de prueba (útil)
+
+FRONTEND:
+- Todos los archivos en frontend/src/
+
+======================================================
+RESUMEN:
+- Archivos eliminados: 8
+- Proyecto más limpio y organizado
+- Toda la funcionalidad intacta
+- Sistema 100% operativo
+======================================================

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test de Cámara</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+        }
+        video {
+            width: 100%;
+            max-width: 640px;
+            border: 3px solid #22c55e;
+            border-radius: 10px;
+            background: #000;
+        }
+        button {
+            margin: 10px;
+            padding: 15px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #22c55e;
+            color: white;
+        }
+        button:hover {
+            background: #16a34a;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        #error {
+            color: red;
+            margin: 20px;
+            padding: 10px;
+            border: 2px solid red;
+            border-radius: 5px;
+            display: none;
+        }
+        #success {
+            color: green;
+            margin: 20px;
+            font-weight: bold;
+        }
+        canvas {
+            display: none;
+        }
+        #captured {
+            margin: 20px auto;
+            max-width: 640px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎥 Test de Cámara Web</h1>
+    <p>Esta página prueba si tu cámara funciona correctamente</p>
+    
+    <div id="error"></div>
+    <div id="success"></div>
+    
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas"></canvas>
+    <img id="captured" style="display:none;">
+    
+    <div>
+        <button id="startBtn">▶️ Iniciar Cámara</button>
+        <button id="captureBtn" disabled>📸 Capturar Foto</button>
+        <button id="stopBtn" disabled>⏹️ Detener Cámara</button>
+    </div>
+    
+    <div id="info" style="margin-top: 30px; text-align: left; padding: 20px; background: #f0f0f0; border-radius: 10px;">
+        <h3>📋 Información del Sistema:</h3>
+        <p id="browserInfo"></p>
+        <p id="mediaDevices"></p>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const capturedImg = document.getElementById('captured');
+        const startBtn = document.getElementById('startBtn');
+        const captureBtn = document.getElementById('captureBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const errorDiv = document.getElementById('error');
+        const successDiv = document.getElementById('success');
+        const browserInfo = document.getElementById('browserInfo');
+        const mediaDevicesInfo = document.getElementById('mediaDevices');
+
+        let stream = null;
+
+        // Mostrar info del navegador
+        browserInfo.textContent = `Navegador: ${navigator.userAgent}`;
+        mediaDevicesInfo.textContent = `getUserMedia disponible: ${navigator.mediaDevices && navigator.mediaDevices.getUserMedia ? 'Sí ✅' : 'No ❌'}`;
+
+        function showError(message) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            successDiv.textContent = '';
+            console.error('Error:', message);
+        }
+
+        function showSuccess(message) {
+            successDiv.textContent = message;
+            errorDiv.style.display = 'none';
+            console.log('Éxito:', message);
+        }
+
+        async function startCamera() {
+            errorDiv.style.display = 'none';
+            startBtn.disabled = true;
+            
+            try {
+                console.log('Solicitando acceso a la cámara...');
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 640 },
+                        height: { ideal: 480 },
+                        facingMode: 'user'
+                    }
+                });
+                
+                console.log('Stream obtenido:', stream);
+                video.srcObject = stream;
+                
+                video.onloadedmetadata = () => {
+                    console.log('Metadata cargada. Dimensiones:', video.videoWidth, 'x', video.videoHeight);
+                    video.play().then(() => {
+                        showSuccess('✅ Cámara iniciada correctamente!');
+                        captureBtn.disabled = false;
+                        stopBtn.disabled = false;
+                        startBtn.disabled = true;
+                    }).catch(err => {
+                        showError('Error al reproducir video: ' + err.message);
+                        startBtn.disabled = false;
+                    });
+                };
+            } catch (err) {
+                console.error('Error completo:', err);
+                let errorMessage = 'Error al acceder a la cámara: ';
+                
+                if (err.name === 'NotAllowedError') {
+                    errorMessage += 'Permiso denegado. Haz clic en el icono 🔒 en la barra de direcciones y permite el acceso a la cámara.';
+                } else if (err.name === 'NotFoundError') {
+                    errorMessage += 'No se encontró ninguna cámara. Conecta una cámara e intenta de nuevo.';
+                } else if (err.name === 'NotReadableError') {
+                    errorMessage += 'La cámara está siendo usada por otra aplicación. Cierra otras apps y vuelve a intentar.';
+                } else {
+                    errorMessage += err.message;
+                }
+                
+                showError(errorMessage);
+                startBtn.disabled = false;
+            }
+        }
+
+        function capturePhoto() {
+            if (video.videoWidth === 0 || video.videoHeight === 0) {
+                showError('La cámara no está lista. Espera un momento.');
+                return;
+            }
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            
+            const imageData = canvas.toDataURL('image/jpeg', 0.9);
+            capturedImg.src = imageData;
+            capturedImg.style.display = 'block';
+            
+            showSuccess('✅ Foto capturada! Dimensiones: ' + canvas.width + 'x' + canvas.height);
+            console.log('Foto capturada. Tamaño base64:', imageData.length, 'caracteres');
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => {
+                    console.log('Deteniendo track:', track.kind);
+                    track.stop();
+                });
+                stream = null;
+            }
+            video.srcObject = null;
+            captureBtn.disabled = true;
+            stopBtn.disabled = true;
+            startBtn.disabled = false;
+            showSuccess('Cámara detenida');
+        }
+
+        startBtn.addEventListener('click', startCamera);
+        captureBtn.addEventListener('click', capturePhoto);
+        stopBtn.addEventListener('click', stopCamera);
+
+        // Verificar permisos
+        if (navigator.permissions) {
+            navigator.permissions.query({ name: 'camera' }).then(permissionStatus => {
+                console.log('Estado de permiso de cámara:', permissionStatus.state);
+                if (permissionStatus.state === 'denied') {
+                    showError('❌ Los permisos de cámara están bloqueados. Ve a la configuración del navegador para permitirlos.');
+                }
+            }).catch(err => {
+                console.log('No se pudo verificar permisos:', err);
+            });
+        }
+    </script>
+</body>
+</html>
