@@ -46,12 +46,23 @@ def generar_docx(tramite, usuario):
     # Información del trámite
     doc.add_heading('DATOS DEL TRÁMITE', level=2)
     
+    # Formatear fecha
+    fecha = tramite.get('fecha_solicitud', 'N/A')
+    if fecha != 'N/A':
+        try:
+            if isinstance(fecha, str):
+                fecha = datetime.strptime(fecha, '%Y-%m-%d').strftime('%d/%m/%Y')
+            else:
+                fecha = fecha.strftime('%d/%m/%Y')
+        except:
+            pass
+    
     # Tabla de información
     table_data = [
         ['Código de Trámite:', tramite.get('codigo_tramite', 'N/A')],
         ['Tipo de Trámite:', tramite.get('tipo_nombre', 'N/A')],
         ['Estado:', tramite.get('estado', 'N/A').upper()],
-        ['Fecha de Solicitud:', tramite.get('fecha_solicitud', 'N/A')],
+        ['Fecha de Solicitud:', str(fecha)],
         ['Prioridad:', f"{tramite.get('prioridad', 5)}/10"],
     ]
     
@@ -156,11 +167,22 @@ def generar_pdf(tramite, usuario):
     # Información del trámite
     story.append(Paragraph("DATOS DEL TRÁMITE", heading_style))
     
+    # Formatear fecha
+    fecha = tramite.get('fecha_solicitud', 'N/A')
+    if fecha != 'N/A':
+        try:
+            if isinstance(fecha, str):
+                fecha = datetime.strptime(fecha, '%Y-%m-%d').strftime('%d/%m/%Y')
+            else:
+                fecha = fecha.strftime('%d/%m/%Y')
+        except:
+            pass
+    
     tramite_data = [
         ['Código de Trámite:', tramite.get('codigo_tramite', 'N/A')],
         ['Tipo de Trámite:', tramite.get('tipo_nombre', 'N/A')],
         ['Estado:', tramite.get('estado', 'N/A').upper()],
-        ['Fecha de Solicitud:', tramite.get('fecha_solicitud', 'N/A')],
+        ['Fecha de Solicitud:', str(fecha)],
         ['Prioridad:', f"{tramite.get('prioridad', 5)}/10"],
     ]
     

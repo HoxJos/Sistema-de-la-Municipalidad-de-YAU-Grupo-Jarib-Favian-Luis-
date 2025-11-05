@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import Layout from '../components/Layout'
 import ReactMarkdown from 'react-markdown'
-import { Search, Filter, FileText, Calendar, Clock, Download, Eye, X, FileDown } from 'lucide-react'
+import { Search, Filter, FileText, Calendar, Clock, Download, Eye, X, FileDown, Image, Video, File } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
@@ -386,6 +386,134 @@ export default function MisTramites() {
                   <h4 className="text-lg font-bold text-gray-900 mb-3">Observaciones</h4>
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <p className="text-yellow-900">{tramiteSeleccionado.observaciones}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Archivos Adjuntos */}
+              {tramiteSeleccionado.documentos_adjuntos && JSON.parse(tramiteSeleccionado.documentos_adjuntos || '[]').length > 0 && (
+                <div>
+                  <h4 className="text-lg font-bold text-gray-900 mb-3">📎 Archivos Adjuntos</h4>
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      {JSON.parse(tramiteSeleccionado.documentos_adjuntos || '[]').map((doc, idx) => (
+                        <div key={idx} className="bg-white border border-purple-200 rounded-lg p-3 hover:shadow-md transition">
+                          <div className="flex items-start gap-2 mb-2">
+                            <div className="flex-shrink-0">
+                              {doc.tipo?.startsWith('image/') ? (
+                                <Image className="w-5 h-5 text-blue-600" />
+                              ) : doc.tipo?.startsWith('video/') ? (
+                                <Video className="w-5 h-5 text-purple-600" />
+                              ) : (
+                                <File className="w-5 h-5 text-gray-600" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">{doc.nombre}</p>
+                              <p className="text-xs text-gray-500">{(doc.tamaño / 1024).toFixed(1)} KB</p>
+                            </div>
+                          </div>
+                          
+                          {/* Preview de imagen */}
+                          {doc.tipo?.startsWith('image/') && (
+                            <div className="mb-2">
+                              <img 
+                                src={doc.data} 
+                                alt={doc.nombre}
+                                className="w-full h-32 object-cover rounded border border-gray-200 cursor-pointer hover:opacity-75 transition"
+                                onClick={() => window.open(doc.data, '_blank')}
+                                title="Click para ver en tamaño completo"
+                              />
+                            </div>
+                          )}
+                          
+                          {/* Preview de video */}
+                          {doc.tipo?.startsWith('video/') && (
+                            <div className="mb-2">
+                              <video 
+                                src={doc.data} 
+                                controls
+                                className="w-full h-32 rounded border border-gray-200"
+                              />
+                            </div>
+                          )}
+                          
+                          {/* Botón de descarga */}
+                          <a
+                            href={doc.data}
+                            download={doc.nombre}
+                            className="flex items-center justify-center gap-2 w-full px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition font-medium text-sm"
+                          >
+                            <Download className="w-4 h-4" />
+                            Descargar
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Archivos del Admin (Respuesta) */}
+              {tramiteSeleccionado.documentos_admin && JSON.parse(tramiteSeleccionado.documentos_admin || '[]').length > 0 && (
+                <div>
+                  <h4 className="text-lg font-bold text-gray-900 mb-3">📎 Archivos de la Municipalidad</h4>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      {JSON.parse(tramiteSeleccionado.documentos_admin || '[]').map((doc, idx) => (
+                        <div key={idx} className="bg-white border border-green-200 rounded-lg p-3 hover:shadow-md transition">
+                          <div className="flex items-start gap-2 mb-2">
+                            <div className="flex-shrink-0">
+                              {doc.tipo?.startsWith('image/') ? (
+                                <Image className="w-5 h-5 text-green-600" />
+                              ) : doc.tipo?.startsWith('video/') ? (
+                                <Video className="w-5 h-5 text-green-600" />
+                              ) : (
+                                <File className="w-5 h-5 text-green-600" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">{doc.nombre}</p>
+                              <p className="text-xs text-gray-500">{(doc.tamaño / 1024).toFixed(1)} KB</p>
+                            </div>
+                          </div>
+                          
+                          {/* Preview de imagen */}
+                          {doc.tipo?.startsWith('image/') && (
+                            <div className="mb-2">
+                              <img 
+                                src={doc.data} 
+                                alt={doc.nombre}
+                                className="w-full h-32 object-cover rounded border border-gray-200 cursor-pointer hover:opacity-75 transition"
+                                onClick={() => window.open(doc.data, '_blank')}
+                                title="Click para ver en tamaño completo"
+                              />
+                            </div>
+                          )}
+                          
+                          {/* Preview de video */}
+                          {doc.tipo?.startsWith('video/') && (
+                            <div className="mb-2">
+                              <video 
+                                src={doc.data} 
+                                controls
+                                className="w-full h-32 rounded border border-gray-200"
+                              />
+                            </div>
+                          )}
+                          
+                          {/* Botón de descarga */}
+                          <a
+                            href={doc.data}
+                            download={doc.nombre}
+                            className="flex items-center justify-center gap-2 w-full px-3 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition font-medium text-sm"
+                          >
+                            <Download className="w-4 h-4" />
+                            Descargar
+                          </a>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}

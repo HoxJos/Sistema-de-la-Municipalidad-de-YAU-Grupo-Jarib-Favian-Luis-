@@ -18,6 +18,7 @@ import Perfil from './pages/Perfil'
 // Páginas de Administrador
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminTramites from './pages/admin/AdminTramites'
+import AdminIA from './pages/admin/AdminIA'
 
 // Contexto de autenticación
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -173,6 +174,14 @@ function AppContent() {
             element={
               <ProtectedAdminRoute>
                 <AdminTramites />
+              </ProtectedAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/ia"
+            element={
+              <ProtectedAdminRoute>
+                <AdminIA />
               </ProtectedAdminRoute>
             }
           />

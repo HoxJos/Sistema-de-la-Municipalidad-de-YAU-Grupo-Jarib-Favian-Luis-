@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext'
 import { Navigate, Link, useNavigate } from 'react-router-dom'
 import { 
   Users, FileText, Clock, CheckCircle, XCircle, AlertCircle,
-  TrendingUp, BarChart3, Activity, LogOut 
+  TrendingUp, BarChart3, Activity, LogOut, Bot 
 } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
@@ -91,7 +91,7 @@ export default function AdminDashboard() {
                 Bienvenido, {user?.nombres} {user?.apellidos}
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               <Link
                 to="/admin/tramites"
                 className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
@@ -99,10 +99,11 @@ export default function AdminDashboard() {
                 Ver Todos los Trámites
               </Link>
               <Link
-                to="/dashboard"
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                to="/admin/ia"
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-2"
               >
-                Vista Ciudadano
+                <Bot className="w-4 h-4" />
+                Asistente IA
               </Link>
               <button
                 onClick={handleLogout}

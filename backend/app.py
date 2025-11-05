@@ -3,7 +3,7 @@ Sistema Municipal - Versión Simplificada (SIN JWT)
 Se conecta a la MISMA base de datos MySQL en XAMPP
 TODO es REAL - Nada es falso
 """
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify, session, send_file
 from flask_cors import CORS
 import os
 import numpy as np
@@ -498,25 +498,41 @@ def exportar_tramite(tramite_id, formato):
     """Exportar trámite a DOCX o PDF"""
     try:
         from exportar_tramites import generar_docx, generar_pdf
-        from flask import send_file
         
         user_id = get_current_user_id()
         if not user_id:
             return jsonify({'error': 'No autenticado'}), 401
         
-        # Obtener trámite
-        query = """
-            SELECT t.*, tt.nombre as tipo_nombre, tt.requisitos,
-                   u.dni, u.nombres, u.apellidos, u.email, u.telefono, u.direccion
-            FROM tramites t
-            JOIN tipos_tramite tt ON t.tipo_tramite_id = tt.id
-            JOIN usuarios u ON t.usuario_id = u.id
-            WHERE t.id = %s AND t.usuario_id = %s
-        """
-        tramite = Database.execute_query(query, (tramite_id, user_id), fetch_one=True)
+        # Verificar si es admin
+        usuario_actual = get_usuario_by_id(user_id)
+        es_admin = usuario_actual['tipo_usuario'] == 'administrador'
         
-        if not tramite:
+        # Obtener trámite (admin puede ver cualquiera, usuario solo los suyos)
+        if es_admin:
+            query = """
+                SELECT t.*, tt.nombre as tipo_nombre, tt.requisitos,
+                       u.dni, u.nombres, u.apellidos, u.email, u.telefono, u.direccion
+                FROM tramites t
+                JOIN tipos_tramite tt ON t.tipo_tramite_id = tt.id
+                JOIN usuarios u ON t.usuario_id = u.id
+                WHERE t.id = %s
+            """
+            resultado = Database.execute_query(query, (tramite_id,), fetch=True)
+        else:
+            query = """
+                SELECT t.*, tt.nombre as tipo_nombre, tt.requisitos,
+                       u.dni, u.nombres, u.apellidos, u.email, u.telefono, u.direccion
+                FROM tramites t
+                JOIN tipos_tramite tt ON t.tipo_tramite_id = tt.id
+                JOIN usuarios u ON t.usuario_id = u.id
+                WHERE t.id = %s AND t.usuario_id = %s
+            """
+            resultado = Database.execute_query(query, (tramite_id, user_id), fetch=True)
+        
+        if not resultado or len(resultado) == 0:
             return jsonify({'error': 'Trámite no encontrado'}), 404
+        
+        tramite = resultado[0]
         
         # Datos del usuario
         usuario = {
@@ -551,7 +567,9 @@ def exportar_tramite(tramite_id, formato):
     
     except Exception as e:
         logger.error(f"❌ Error exportando trámite: {e}")
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({'error': str(e), 'traceback': traceback.format_exc()}), 500
 
 # ============================================
 # ENDPOINTS - GEMINI AI
@@ -637,6 +655,57 @@ def ayudar_redactar():
         logger.error(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/gemini/consultar-admin', methods=['POST'])
+def consultar_admin():
+    """Consultar IA específico para administradores"""
+    try:
+        user_id = get_current_user_id()
+        if not user_id:
+            return jsonify({'error': 'Debes iniciar sesión'}), 401
+        
+        usuario = get_usuario_by_id(user_id)
+        if usuario['tipo_usuario'] != 'administrador':
+            return jsonify({'error': 'Acceso denegado. Solo administradores.'}), 403
+        
+        data = request.get_json()
+        
+        if 'pregunta' not in data:
+            return jsonify({'error': 'Pregunta requerida'}), 400
+        
+        logger.info(f"🤖 Admin consultando Gemini: '{data['pregunta']}'")
+        
+        if not gemini_service.is_available():
+            logger.error("❌ Servicio Gemini no disponible")
+            return jsonify({
+                'success': False,
+                'error': 'Servicio de IA no disponible'
+            })
+        
+        # Contexto específico para administradores
+        contexto_admin = """Eres un asistente experto en gestión municipal y administrativa.
+        Estás ayudando a un administrador/alcalde de una municipalidad provincial.
+        Proporciona sugerencias profesionales, estrategias de optimización y mejores prácticas 
+        para la gestión pública, atención ciudadana, procesos administrativos y liderazgo municipal."""
+        
+        resultado = gemini_service.consultar(
+            pregunta=data['pregunta'],
+            contexto=contexto_admin,
+            user_id=user_id
+        )
+        
+        if resultado.get('success'):
+            logger.info(f"✅ Consulta admin respondida correctamente")
+        else:
+            logger.error(f"❌ Error en consulta admin: {resultado.get('error')}")
+        
+        return jsonify(resultado)
+    
+    except Exception as e:
+        logger.error(f"❌ Error en consultar-admin: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # ============================================
 # ENDPOINTS - NOTIFICACIONES
 # ============================================
@@ -672,11 +741,39 @@ def marcar_leida(notif_id):
 
 @app.route('/api/dashboard/stats', methods=['GET'])
 def dashboard_stats():
-    """Estadísticas del dashboard"""
+    """Estadísticas del dashboard del usuario"""
     try:
-        stats = get_estadisticas_dashboard()
-        return jsonify(stats)
+        user_id = get_current_user_id()
+        if not user_id:
+            return jsonify({'error': 'Debes iniciar sesión'}), 401
+        
+        # Estadísticas solo del usuario actual
+        query = """
+            SELECT 
+                COUNT(*) as total_tramites,
+                AVG(DATEDIFF(NOW(), fecha_solicitud)) as tiempo_promedio_dias
+            FROM tramites 
+            WHERE usuario_id = %s
+        """
+        resultado = Database.execute_query(query, (user_id,), fetch=True)
+        stats_base = resultado[0] if resultado else {'total_tramites': 0, 'tiempo_promedio_dias': 0}
+        
+        # Trámites por estado del usuario
+        query_estados = """
+            SELECT estado, COUNT(*) as cantidad
+            FROM tramites
+            WHERE usuario_id = %s
+            GROUP BY estado
+        """
+        tramites_por_estado = Database.execute_query(query_estados, (user_id,), fetch=True)
+        
+        return jsonify({
+            'total_tramites': stats_base['total_tramites'] or 0,
+            'tiempo_promedio_dias': float(stats_base['tiempo_promedio_dias'] or 0),
+            'tramites_por_estado': tramites_por_estado or []
+        })
     except Exception as e:
+        logger.error(f"Error obteniendo stats: {e}")
         return jsonify({'error': str(e)}), 500
 
 # ============================================
@@ -869,11 +966,17 @@ def admin_responder_tramite(tramite_id):
         if 'estado' not in data:
             return jsonify({'error': 'Estado requerido'}), 400
         
+        # Preparar documentos del admin si existen
+        documentos_admin_json = None
+        if 'documentos_admin' in data and data['documentos_admin']:
+            documentos_admin_json = json.dumps(data['documentos_admin'])
+        
         query = """
             UPDATE tramites 
             SET estado = %s, 
                 respuesta_admin = %s,
                 atendido_por = %s,
+                documentos_admin = %s,
                 fecha_actualizacion = NOW(),
                 fecha_completado = CASE 
                     WHEN %s IN ('aprobado', 'rechazado', 'completado') THEN NOW()
@@ -891,6 +994,7 @@ def admin_responder_tramite(tramite_id):
             str(data['estado']),
             str(data.get('respuesta', '')),
             int(user_id),
+            documentos_admin_json,
             str(data['estado']),
             str(data['estado']),
             int(tramite_id)
